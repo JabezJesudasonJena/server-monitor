@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import swc from 'unplugin-swc'
 
 export default defineConfig({
   resolve: {
@@ -8,5 +9,7 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    setupFiles: ['./vitest.setup.ts'],
   },
+  plugins: [swc.vite()]
 });

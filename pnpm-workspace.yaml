@@ -2,4 +2,5 @@ packages:
   - "apps/*"
 allowBuilds:
   '@scarf/scarf': false
+  '@swc/core': set this to true or false
   better-sqlite3: false
