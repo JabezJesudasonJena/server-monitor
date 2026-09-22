@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -8,15 +7,17 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [],
     }).compile();
 
     appController = app.get<AppController>(AppController);
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return "Welcome to the Server Monitor API"', () => {
+      // Reason: AppController.getHello() returns the API welcome message rather than "Hello World!"
+      // What it does: Asserts that calling appController.getHello() returns "Welcome to the Server Monitor API"
+      expect(appController.getHello()).toBe('Welcome to the Server Monitor API');
     });
   });
 });
