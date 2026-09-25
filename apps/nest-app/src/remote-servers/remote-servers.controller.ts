@@ -14,10 +14,7 @@ export class RemoteServersController {
     @Body() props: CreateRemoteServerDto,
     @CurrentUser() currentUser: ICurrentUser
   ) {
-    return this.remoteServersService.create({
-      ...props,
-      ownerId: currentUser.id
-    });
+    return this.remoteServersService.create(props, currentUser.id);
   }
 
   @Get()
