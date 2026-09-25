@@ -13,12 +13,12 @@ export class RemoteServersService {
   ) {}
 
   
-  create(props: CreateRemoteServerDto & {ownerId: string}) {
+  create(props: CreateRemoteServerDto , ownerId: string) {
     const remoteServer = this.repo.create({
       ...props,
+      ownerId,
       status: RemoteServerStatus.UNKNOWN
     });
-    console.log(remoteServer);
     return this.repo.save(remoteServer);
   }
 
