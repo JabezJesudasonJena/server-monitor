@@ -7,34 +7,44 @@ import type { ICurrentUser } from '../auth/current-user.interface.js';
 
 @Controller('remote-servers')
 export class RemoteServersController {
-  constructor(private readonly remoteServersService: RemoteServersService) { }
+  constructor(private readonly remoteServersService: RemoteServersService) {}
 
   @Post()
   create(
-    @Body() createRemoteServerDto: CreateRemoteServerDto,
+    @Body() props: CreateRemoteServerDto,
     @CurrentUser() currentUser: ICurrentUser
   ) {
-    console.log(currentUser);
-    return this.remoteServersService.create(createRemoteServerDto);
+    return this.remoteServersService.create({
+      ...props,
+      ownerId: currentUser.id
+    });
   }
 
   @Get()
-  findAll() {
+  findAll(@CurrentUser() currentUser: ICurrentUser) {
     return this.remoteServersService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.remoteServersService.findOne(+id);
+  findOne(@Param('id') id: string, @CurrentUser() currentUser: ICurrentUser) {
+    // return 'finds all user'
+    return this.remoteServersService.findOne(id, currentUser.id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRemoteServerDto: UpdateRemoteServerDto) {
-    return this.remoteServersService.update(+id, updateRemoteServerDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateRemoteServerDto: UpdateRemoteServerDto,
+    @CurrentUser() currentUser: ICurrentUser,
+  ) {
+    return this.remoteServersService.update(id, updateRemoteServerDto, currentUser.id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.remoteServersService.remove(+id);
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: ICurrentUser,
+  ) {
+    return this.remoteServersService.remove(id, currentUser.id);
   }
 }
