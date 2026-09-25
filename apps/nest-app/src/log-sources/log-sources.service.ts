@@ -46,7 +46,7 @@ export class LogSourcesService {
   }
 
   async remove(id: string, ownerId: string) {
-    const source = await this.getById(id, ownerId)
-    await this.repo.remove(source)
+    const source = await this.getById(id, ownerId);
+    return await this.repo.remove(source);
   }
 }
