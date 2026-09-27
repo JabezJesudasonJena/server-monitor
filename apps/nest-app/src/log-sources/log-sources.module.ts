@@ -8,5 +8,6 @@ import { LogSource } from './entities/log-source.entity.js';
   imports: [TypeOrmModule.forFeature([LogSource])],
   controllers: [LogSourcesController],
   providers: [LogSourcesService],
+  exports: [LogSourcesService]
 })
 export class LogSourcesModule {}

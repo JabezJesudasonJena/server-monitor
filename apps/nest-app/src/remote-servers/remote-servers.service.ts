@@ -22,7 +22,7 @@ export class RemoteServersService {
     return this.repo.save(remoteServer);
   }
 
-  async getById(id: number, ownerId: string) {
+  async getById(id: string, ownerId: string) {
     const server = await this.repo.findOne({
       where: {id: String(id), ownerId}
     });
