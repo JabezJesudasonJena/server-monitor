@@ -154,7 +154,7 @@ describe('LogAnalysisJobsService', () => {
     });
   });
 
-  describe('update', () => {
+  describe('update', () => {  
     const updateDto: UpdateLogAnalysisJobDto = {
       description: 'Updated description',
     };
