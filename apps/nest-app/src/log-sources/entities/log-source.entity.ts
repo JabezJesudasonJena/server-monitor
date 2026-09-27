@@ -28,6 +28,9 @@ export class LogSource {
     @Column()
     type: LogSourceType;
 
+    @Column({type:'simple-json',nullable: true})
+    ticketingSystemConfig?: Record<string, any>;
+
     @Column()
     status: LogSourceStatus
 

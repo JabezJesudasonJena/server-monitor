@@ -13,6 +13,10 @@ export class CreateLogSourceDto {
     @IsObject()
     config: Record<string, any>;
 
+    @IsObject()
+    @IsOptional()
+    ticketingSystemConfig?: Record<string, any>;
+
     @IsEnum(LogSourceType)
     type: LogSourceType;
 }
