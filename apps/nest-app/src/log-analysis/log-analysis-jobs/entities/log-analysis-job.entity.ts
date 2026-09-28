@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { LogSource } from "../../../log-sources/entities/log-source.entity.js";
 import { RemoteServer } from "../../../remote-servers/entities/remote-server.entity.js";
 
@@ -23,7 +23,7 @@ export class LogAnalysisJob {
     @Column()
     ownerId: string;
 
-    @Column({nullable: true})
+    @Column({ nullable: true })
     description?: string;
 
     @Column()
@@ -38,11 +38,11 @@ export class LogAnalysisJob {
     @UpdateDateColumn()
     updatedAt: Date;
 
-    @ManyToOne(() => LogSource)
+    @OneToOne(() => LogSource)
     @JoinColumn()
     logSource: LogSource;
 
-    @ManyToOne(() => RemoteServer)
+    @OneToOne(() => RemoteServer)
     @JoinColumn()
     remoteServer: RemoteServer;
 
