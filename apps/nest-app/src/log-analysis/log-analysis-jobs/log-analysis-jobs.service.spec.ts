@@ -82,9 +82,38 @@ describe('LogAnalysisJobsService', () => {
         logSource: mockLogSource,
         remoteServer: mockRemoteServer,
         status: LogAnalysisJobStatus.INITIALIZED,
+        ticketingSystemConfig: {},
       });
       expect(repo.save).toHaveBeenCalledTimes(1);
       expect(repo.save).toHaveBeenCalledWith(createdJob);
+      expect(result).toEqual(savedJob);
+    });
+
+    it('should create a new log analysis job with custom ticketingSystemConfig', async () => {
+      const customProps: CreateLogAnalysisJobDto = {
+        ...props,
+        ticketingSystemConfig: { type: 'jira', projectKey: 'PROJ' },
+      };
+      const mockLogSource = { id: 'log-source-1' } as any;
+      const mockRemoteServer = { id: 'remote-server-1' } as any;
+      const createdJob = { ...customProps, logSource: mockLogSource, remoteServer: mockRemoteServer } as any;
+      const savedJob = { id: 'job-1', ...createdJob } as any;
+
+      logSourcesService.getById.mockResolvedValue(mockLogSource);
+      remoteServersService.getById.mockResolvedValue(mockRemoteServer);
+      repo.create.mockReturnValue(createdJob);
+      repo.save.mockResolvedValue(savedJob);
+
+      const result = await service.create(customProps, 'user-1');
+
+      expect(repo.create).toHaveBeenCalledWith({
+        ...customProps,
+        ownerId: 'user-1',
+        logSource: mockLogSource,
+        remoteServer: mockRemoteServer,
+        status: LogAnalysisJobStatus.INITIALIZED,
+        ticketingSystemConfig: { type: 'jira', projectKey: 'PROJ' },
+      });
       expect(result).toEqual(savedJob);
     });
 

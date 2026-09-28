@@ -30,7 +30,8 @@ export class LogAnalysisJobsService {
       ownerId,
       logSource,
       remoteServer,
-      status: LogAnalysisJobStatus.INITIALIZED
+      status: LogAnalysisJobStatus.INITIALIZED,
+      ticketingSystemConfig: props.ticketingSystemConfig || {}
     })
 
     return this.repo.save(logAnalysisJob)
