@@ -41,9 +41,9 @@ export class LogAnalysisJob {
     @UpdateDateColumn()
     updatedAt: Date;
 
-    @OneToOne(() => LogSource)
+    @OneToOne(() => LogSource, {nullable: true})
     @JoinColumn()
-    logSource: LogSource;
+    logSource?: LogSource | null;
 
     @OneToOne(() => RemoteServer)
     @JoinColumn()

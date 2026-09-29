@@ -18,10 +18,12 @@ export class LogAnalysisJobsService {
   ) {}
 
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
-    const logSource = await this.logSourcesService.getById(props.logSourceId, ownerId);
+    const logSource = props.logSourceId
+      ? await this.logSourcesService.getById(props.logSourceId, ownerId)
+      : null;
     const remoteServer = await this.remoteServersService.getById(props.remoteServerId, ownerId);
     
-    if(!logSource || !remoteServer) {
+    if ((props.logSourceId && !logSource) || !remoteServer) {
       throw new NotFoundException('Log Source or Remote Server not found!');
     }
 

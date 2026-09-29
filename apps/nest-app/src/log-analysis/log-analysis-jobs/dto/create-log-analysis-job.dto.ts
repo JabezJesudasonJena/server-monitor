@@ -24,7 +24,8 @@ export class CreateLogAnalysisJobDto {
     ticketingSystemConfig?: Record<string, any>;
 
     @IsString()
-    logSourceId: string;
+    @IsOptional()
+    logSourceId?: string;
 
     @IsString()
     remoteServerId: string;

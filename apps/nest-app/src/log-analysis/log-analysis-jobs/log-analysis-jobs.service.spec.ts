@@ -117,11 +117,31 @@ describe('LogAnalysisJobsService', () => {
       expect(result).toEqual(savedJob);
     });
 
-    it('should throw NotFoundException if log source is not found', async () => {
-      logSourcesService.getById.mockResolvedValue(null);
-      remoteServersService.getById.mockResolvedValue({ id: 'remote-server-1' } as any);
+    it('should not throw NotFoundException if log source is not found', async () => {
+      const customProps: CreateLogAnalysisJobDto = {
+        ...props,
+        logSourceId: undefined,
+      };
 
-      await expect(service.create(props, 'user-1')).rejects.toThrow(NotFoundException);
+      const mockRemoteServer = { id: 'remote-server-1' } as any;
+      const createdJob = { ...customProps,remoteServer: mockRemoteServer } as any;
+      const savedJob = { id: 'job-1', ...createdJob } as any;
+
+      remoteServersService.getById.mockResolvedValue(mockRemoteServer);
+      repo.create.mockReturnValue(createdJob);
+      repo.save.mockResolvedValue(savedJob);
+
+      const result = await service.create(customProps, 'user-1');
+
+      expect(repo.create).toHaveBeenCalledWith({
+        ...customProps,
+        ownerId: 'user-1',
+        logSource: null,
+        remoteServer: mockRemoteServer,
+        status: LogAnalysisJobStatus.INITIALIZED,
+        ticketingSystemConfig: {},
+      });
+      expect(result).toEqual(savedJob);
     });
 
     it('should throw NotFoundException if remote server is not found', async () => {
