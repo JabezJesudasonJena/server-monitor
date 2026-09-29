@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn, type Relation } from "typeorm";
 import { LogSource } from "../../../log-sources/entities/log-source.entity.js";
 import { RemoteServer } from "../../../remote-servers/entities/remote-server.entity.js";
+import { Anomaly } from "./anomaly.entity.js";
 
 export enum LogAnalysisJobStatus {
     PENDING = 'pending',
@@ -48,5 +49,8 @@ export class LogAnalysisJob {
     @OneToOne(() => RemoteServer)
     @JoinColumn()
     remoteServer: RemoteServer;
+
+    @OneToMany(() => Anomaly, (anomaly) => anomaly.logAnalysisJob, {onDelete: 'CASCADE'})
+    anomalies: Relation<Anomaly[]>;
 
 }

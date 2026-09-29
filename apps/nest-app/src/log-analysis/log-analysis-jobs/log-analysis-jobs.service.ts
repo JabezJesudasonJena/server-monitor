@@ -39,7 +39,7 @@ export class LogAnalysisJobsService {
     return this.repo.save(logAnalysisJob)
 
   }
-
+  
   async findAll(ownerId: string) {
     return this.repo.find({where: {ownerId}});
   }
