@@ -1,0 +1,33 @@
+services:
+  dummy-log-gen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dummy-log-gen
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-4000}:4000"
+    environment:
+      # ── App ─────────────────────────────────────────────────
+      PORT: "4000"
+
+      # ── Fluent Bit HTTP output ───────────────────────────────
+      # Host/IP of the log collector (e.g. your server-monitor ingest service)
+      FLUENT_HTTP_HOST: "${FLUENT_HTTP_HOST:-localhost}"
+      # Port of the collector (Fluent Bit's own HTTP input listens on 9880 by default)
+      FLUENT_HTTP_PORT: "${FLUENT_HTTP_PORT:-9880}"
+      # URI path on the collector
+      FLUENT_HTTP_URI:  "${FLUENT_HTTP_URI:-/}"
+    volumes:
+      # Persist log files across container restarts
+      - log_data:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/status"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  log_data:
+    driver: local
