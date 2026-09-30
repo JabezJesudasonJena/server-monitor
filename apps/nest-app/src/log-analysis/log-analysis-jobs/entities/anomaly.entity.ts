@@ -33,5 +33,4 @@ export class Anomaly {
 
     @ManyToOne(() => LogAnalysisJob, (job) => job.anomalies)
     logAnalysisJob: Relation<LogAnalysisJob>;
-
 }
