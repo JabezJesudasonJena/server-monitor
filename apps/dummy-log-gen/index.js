@@ -4,33 +4,34 @@ import winston from "winston";
 // ─────────────────────────────────────────────
 //  Logger setup
 // ─────────────────────────────────────────────
+// Shared JSON format for file transports — one JSON object per line (NDJSON)
+const jsonFileFormat = winston.format.combine(
+  winston.format.timestamp(),        // ISO-8601 by default
+  winston.format.errors({ stack: true }),
+  winston.format.json()              // { level, message, timestamp, ...meta }
+);
+
+// Human-readable colourised format for the console
+const consoleFormat = winston.format.combine(
+  winston.format.colorize({ all: true }),
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  winston.format.errors({ stack: true }),
+  winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
+    const metaStr = Object.keys(meta).length ? " " + JSON.stringify(meta) : "";
+    return stack
+      ? `[${timestamp}] ${level}: ${message}\n${stack}${metaStr}`
+      : `[${timestamp}] ${level}: ${message}${metaStr}`;
+  })
+);
+
 const logger = winston.createLogger({
   level: "silly",
-  format: winston.format.combine(
-    winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    winston.format.errors({ stack: true }),
-    winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
-      const metaStr = Object.keys(meta).length ? " " + JSON.stringify(meta) : "";
-      return stack
-        ? `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}${metaStr}`
-        : `[${timestamp}] ${level.toUpperCase()}: ${message}${metaStr}`;
-    })
-  ),
   transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize({ all: true }),
-        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-        winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
-          const metaStr = Object.keys(meta).length ? " " + JSON.stringify(meta) : "";
-          return stack
-            ? `[${timestamp}] ${level}: ${message}\n${stack}${metaStr}`
-            : `[${timestamp}] ${level}: ${message}${metaStr}`;
-        })
-      ),
-    }),
-    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
-    new winston.transports.File({ filename: "logs/combined.log" }),
+    // Console — stays readable for local dev
+    new winston.transports.Console({ format: consoleFormat }),
+    // Files — NDJSON so Fluent Bit (and any log collector) can parse them easily
+    new winston.transports.File({ filename: "logs/error.log",    level: "error", format: jsonFileFormat }),
+    new winston.transports.File({ filename: "logs/combined.log",                 format: jsonFileFormat }),
   ],
 });
 
