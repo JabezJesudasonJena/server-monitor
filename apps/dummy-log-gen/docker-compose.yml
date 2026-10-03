@@ -18,8 +18,11 @@ services:
       FLUENT_HTTP_PORT: "${FLUENT_HTTP_PORT:-3000}"
       # URI path on the collector
       FLUENT_HTTP_URI:  "${FLUENT_HTTP_URI:-/log-analysis/ingest/job-123}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      # Persist log files across container restarts
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./parsers.conf:/fluent-bit/etc/parsers.conf:ro
       - log_data:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/status"]

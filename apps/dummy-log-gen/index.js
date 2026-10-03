@@ -6,9 +6,15 @@ import winston from "winston";
 // ─────────────────────────────────────────────
 // Shared JSON format for file transports — one JSON object per line (NDJSON)
 const jsonFileFormat = winston.format.combine(
-  winston.format.timestamp(),        // ISO-8601 by default
+  winston.format.timestamp(),        // ISO-8601 timestamp
   winston.format.errors({ stack: true }),
-  winston.format.json()              // { level, message, timestamp, ...meta }
+  // Inject an explicit uppercase `severity` field so collectors/filters
+  // have a clear, unambiguous indicator of the log level
+  winston.format((info) => {
+    info.severity = info.level.toUpperCase(); // "ERROR", "WARN", "INFO", etc.
+    return info;
+  })(),
+  winston.format.json()              // { level, severity, message, timestamp, ...meta }
 );
 
 // Human-readable colourised format for the console
@@ -177,14 +183,22 @@ function emitScheduledLog() {
 //  Generator state
 // ─────────────────────────────────────────────
 const state = {
+  // Normal log generator (info / warn / debug / http)
   running: false,
   startedAt: null,
   stoppedAt: null,
   totalLogsEmitted: 0,
-  errorsTriggered: 0,
   schedulerHandle: null,
+
+  // Error log generator (error only)
+  errorsRunning: false,
+  errorsStartedAt: null,
+  errorsStoppedAt: null,
+  errorsTriggered: 0,
+  errorSchedulerHandle: null,
 };
 
+// ── Normal log scheduler ─────────────────────
 function scheduleNextLog() {
   if (!state.running) return;
   const delay = rand(300, 3000);
@@ -196,22 +210,53 @@ function scheduleNextLog() {
 }
 
 function startGenerator() {
-  if (state.running) return false; // already running
+  if (state.running) return false;
   state.running = true;
   state.startedAt = new Date().toISOString();
   state.stoppedAt = null;
   scheduleNextLog();
-  logger.info("Log generator STARTED", { intervalRange: "300ms – 3s" });
+  logger.info("Log generator STARTED", { levels: "info, warn, debug, http", intervalRange: "300ms–3s" });
   return true;
 }
 
 function stopGenerator() {
-  if (!state.running) return false; // already stopped
+  if (!state.running) return false;
   state.running = false;
   state.stoppedAt = new Date().toISOString();
   clearTimeout(state.schedulerHandle);
   state.schedulerHandle = null;
   logger.info("Log generator STOPPED", { totalLogsEmitted: state.totalLogsEmitted });
+  return true;
+}
+
+// ── Error log scheduler ──────────────────────
+function scheduleNextError() {
+  if (!state.errorsRunning) return;
+  const delay = rand(500, 4000);
+  state.errorSchedulerHandle = setTimeout(() => {
+    emitError();          // random error type each time
+    state.errorsTriggered++;
+    scheduleNextError();
+  }, delay);
+}
+
+function startErrorGenerator() {
+  if (state.errorsRunning) return false;
+  state.errorsRunning = true;
+  state.errorsStartedAt = new Date().toISOString();
+  state.errorsStoppedAt = null;
+  scheduleNextError();
+  logger.warn("Error generator STARTED", { intervalRange: "500ms–4s" });
+  return true;
+}
+
+function stopErrorGenerator() {
+  if (!state.errorsRunning) return false;
+  state.errorsRunning = false;
+  state.errorsStoppedAt = new Date().toISOString();
+  clearTimeout(state.errorSchedulerHandle);
+  state.errorSchedulerHandle = null;
+  logger.warn("Error generator STOPPED", { errorsTriggered: state.errorsTriggered });
   return true;
 }
 
@@ -241,12 +286,14 @@ app.get("/", (_req, res) => {
     service: "dummy-log-gen",
     generatorRunning: state.running,
     endpoints: {
-      "GET  /status":            "Server health, memory usage, and generator snapshot",
-      "GET  /generator/start":   "Start random log generation (info/warn/debug/http only)",
-      "GET  /generator/stop":    "Stop random log generation",
-      "GET  /generator/status":  "Detailed generator state and counters",
-      "POST /trigger/error":     "Emit one error log — body: { type?: 'db|auth|payment|crash|memory|queue' }",
-      "POST /trigger/log":       "Emit one non-error log — body: { level?: 'info|warn|debug|http', message? }",
+      "GET  /status":                    "Server health, memory, and both generator states",
+      "GET  /generator/start":           "Start normal log generation (info/warn/debug/http)",
+      "GET  /generator/stop":            "Stop normal log generation",
+      "GET  /generator/start-errors":    "Start continuous ERROR log generation",
+      "GET  /generator/stop-errors":     "Stop continuous ERROR log generation",
+      "GET  /generator/status":          "Detailed state + counters for both generators",
+      "POST /trigger/error":             "Emit one error on demand — body: { type?: 'db|auth|payment|crash|memory|queue' }",
+      "POST /trigger/log":               "Emit one non-error log — body: { level?: 'info|warn|debug|http', message? }",
     },
   });
 });
@@ -269,6 +316,11 @@ app.get("/status", (_req, res) => {
       startedAt: state.startedAt,
       stoppedAt: state.stoppedAt,
       totalLogsEmitted: state.totalLogsEmitted,
+    },
+    errorGenerator: {
+      running: state.errorsRunning,
+      startedAt: state.errorsStartedAt,
+      stoppedAt: state.errorsStoppedAt,
       errorsTriggered: state.errorsTriggered,
     },
     timestamp: new Date().toISOString(),
@@ -296,16 +348,46 @@ app.get("/generator/stop", (_req, res) => {
   });
 });
 
+// ── GET /generator/start-errors  ────────────────────────────────────────────
+app.get("/generator/start-errors", (_req, res) => {
+  const started = startErrorGenerator();
+  res.json({
+    errorGenerator: "started",
+    alreadyRunning: !started,
+    startedAt: state.errorsStartedAt,
+    note: "Errors will appear in combined.log and be forwarded by Fluent Bit",
+  });
+});
+
+// ── GET /generator/stop-errors  ─────────────────────────────────────────────
+app.get("/generator/stop-errors", (_req, res) => {
+  const stopped = stopErrorGenerator();
+  res.json({
+    errorGenerator: "stopped",
+    alreadyStopped: !stopped,
+    stoppedAt: state.errorsStoppedAt,
+    errorsTriggered: state.errorsTriggered,
+  });
+});
+
 // ── GET /generator/status  ───────────────────────────────────────────────────
 app.get("/generator/status", (_req, res) => {
   res.json({
-    running: state.running,
-    startedAt: state.startedAt,
-    stoppedAt: state.stoppedAt,
-    totalLogsEmitted: state.totalLogsEmitted,
-    errorsTriggered: state.errorsTriggered,
     uptime: process.uptime().toFixed(2) + "s",
-    availableErrorTypes: ERROR_TYPES,
+    normalGenerator: {
+      running: state.running,
+      startedAt: state.startedAt,
+      stoppedAt: state.stoppedAt,
+      totalLogsEmitted: state.totalLogsEmitted,
+      levels: ["info", "warn", "debug", "http"],
+    },
+    errorGenerator: {
+      running: state.errorsRunning,
+      startedAt: state.errorsStartedAt,
+      stoppedAt: state.errorsStoppedAt,
+      errorsTriggered: state.errorsTriggered,
+      availableTypes: ERROR_TYPES,
+    },
   });
 });
 
@@ -366,10 +448,12 @@ app.listen(PORT, () => {
 process.on("SIGINT", () => {
   logger.info("SIGINT received — shutting down gracefully");
   stopGenerator();
+  stopErrorGenerator();
   process.exit(0);
 });
 process.on("SIGTERM", () => {
   logger.info("SIGTERM received — shutting down gracefully");
   stopGenerator();
+  stopErrorGenerator();
   process.exit(0);
 });
