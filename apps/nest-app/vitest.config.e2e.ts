@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import swc from 'unplugin-swc';
 
 export default defineConfig({
   resolve: {
@@ -9,4 +10,5 @@ export default defineConfig({
     root: './',
     include: ['**/*.e2e-spec.ts'],
   },
+  plugins: [swc.vite()],
 });

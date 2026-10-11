@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto.js';
 import { UpdateLogAnalysisJobDto } from './dto/update-log-analysis-job.dto.js';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { LogAnalysisJob, LogAnalysisJobStatus } from './entities/log-analysis-job.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LogSourcesService } from '../../log-sources/log-sources.service.js';
 import { RemoteServersService } from '../../remote-servers/remote-servers.service.js';
+import { Anomaly, AnomalySeverity, AnomalyStatus } from './entities/anomaly.entity.js';
 
 @Injectable()
 export class LogAnalysisJobsService {
@@ -14,7 +15,9 @@ export class LogAnalysisJobsService {
     @InjectRepository(LogAnalysisJob)
     private repo: Repository<LogAnalysisJob>,
     private logSourcesService: LogSourcesService,
-    private remoteServersService: RemoteServersService
+    private remoteServersService: RemoteServersService,
+    @InjectRepository(Anomaly)
+    private anomalyRepo: Repository<Anomaly>,
   ) {}
 
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
@@ -66,5 +69,37 @@ export class LogAnalysisJobsService {
     const exist = await this.findOne(id, ownerId);
     if (!exist) throw new NotFoundException('Log analysis job not found');
     return this.repo.remove(exist);
+  }
+
+  async addAnomaly(job:LogAnalysisJob, {title, description, severity}: {
+    title: string,
+    description?: string,
+    severity: AnomalySeverity,
+  }){
+    // check if the job has an anomaly
+    // if yes then ignore
+    // if no then create a new anomanly and add it to the job
+    const existingAnomaly = await this.anomalyRepo.findOne({
+      where: {
+        logAnalysisJob: {id:job.id},
+        // this to check that if there is already any anomaly present before this...
+        status: In([AnomalyStatus.OPEN, AnomalyStatus.IN_PROGRESS]),
+
+      }
+    })
+
+    if(existingAnomaly){
+      return
+    }
+
+    const anomaly = this.anomalyRepo.create({
+      logAnalysisJob: job,
+      status:AnomalyStatus.OPEN,
+      title,
+      description,
+      severity
+    })
+
+    await this.anomalyRepo.save(anomaly)
   }
 }

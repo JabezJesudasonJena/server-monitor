@@ -15,5 +15,6 @@ import { Anomaly } from './entities/anomaly.entity.js';
   ],
   controllers: [LogAnalysisJobsController],
   providers: [LogAnalysisJobsService],
+  exports: [LogAnalysisJobsService]
 })
 export class LogAnalysisJobsModule {}

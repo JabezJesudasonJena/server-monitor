@@ -1,16 +1,25 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { ApiBody } from '@nestjs/swagger';
+import { LogAnalysisService } from './log-analysis.service.js';
+import type { ICurrentUser } from '../auth/current-user.interface.js';
+import { CurrentUser } from '../auth/current-auth.decorator.js';
 
 @Controller('log-analysis')
 export class LogAnalysisController {
+    
+    constructor(
+        private readonly logAnalysisService: LogAnalysisService
+    ) {}    
 
     @ApiBody({type: Array<Record<string, any>>})
     @Post('ingest/:jobId')
     injectLogs(
         @Param('jobId') jobId: string,
-        @Body() body: Array<Record<string, any>>
+        @Body() body: Array<Record<string, any>>,
+        @CurrentUser() currentUser: ICurrentUser,
     ) {
-        console.log(body);
+        // TODO: validate the body in future
+        return this.logAnalysisService.ingestLogs(jobId, currentUser.id, body)
     }
 
 }

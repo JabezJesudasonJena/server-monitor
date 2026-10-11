@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LogAnalysisJobsService } from './log-analysis-jobs.service.js';
 import { LogAnalysisJob, LogAnalysisJobStatus, LogAnalysisJobType } from './entities/log-analysis-job.entity.js';
+import { Anomaly } from './entities/anomaly.entity.js';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { UpdateLogAnalysisJobDto } from './dto/update-log-analysis-job.dto.js';
 describe('LogAnalysisJobsService', () => {
   let service: LogAnalysisJobsService;
   let repo: Mocked<Repository<LogAnalysisJob>>;
+  let anomalyRepo: Mocked<Repository<Anomaly>>;
   let logSourcesService: Mocked<LogSourcesService>;
   let remoteServersService: Mocked<RemoteServersService>;
 
@@ -22,6 +24,10 @@ describe('LogAnalysisJobsService', () => {
         {
           provide: getRepositoryToken(LogAnalysisJob),
           useValue: mock<Repository<LogAnalysisJob>>(),
+        },
+        {
+          provide: getRepositoryToken(Anomaly),
+          useValue: mock<Repository<Anomaly>>(),
         },
         {
           provide: LogSourcesService,
@@ -36,6 +42,7 @@ describe('LogAnalysisJobsService', () => {
 
     service = module.get<LogAnalysisJobsService>(LogAnalysisJobsService);
     repo = module.get<Mocked<Repository<LogAnalysisJob>>>(getRepositoryToken(LogAnalysisJob));
+    anomalyRepo = module.get<Mocked<Repository<Anomaly>>>(getRepositoryToken(Anomaly));
     logSourcesService = module.get<Mocked<LogSourcesService>>(LogSourcesService);
     remoteServersService = module.get<Mocked<RemoteServersService>>(RemoteServersService);
   });
@@ -69,7 +76,7 @@ describe('LogAnalysisJobsService', () => {
       repo.create.mockReturnValue(createdJob);
       repo.save.mockResolvedValue(savedJob);
 
-      const result = await service.create(props, 'user-1');
+      const result = await service.create(props, 'user-1');  
 
       expect(logSourcesService.getById).toHaveBeenCalledTimes(1);
       expect(logSourcesService.getById).toHaveBeenCalledWith('log-source-1', 'user-1');

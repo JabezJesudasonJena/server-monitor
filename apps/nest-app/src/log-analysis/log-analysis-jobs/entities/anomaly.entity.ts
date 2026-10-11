@@ -20,6 +20,9 @@ export class Anomaly {
     id:string;
 
     @Column()
+    status: AnomalyStatus;
+
+    @Column()
     title:string;
 
     @Column({nullable: true})
