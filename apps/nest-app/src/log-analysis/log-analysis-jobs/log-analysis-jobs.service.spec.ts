@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LogAnalysisJobsService } from './log-analysis-jobs.service.js';
 import { LogAnalysisJob, LogAnalysisJobStatus, LogAnalysisJobType } from './entities/log-analysis-job.entity.js';
-import { Anomaly } from './entities/anomaly.entity.js';
-import { Repository } from 'typeorm';
+import { Anomaly, AnomalySeverity, AnomalyStatus } from './entities/anomaly.entity.js';
+import { Repository, In } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { LogSourcesService } from '../../log-sources/log-sources.service.js';
@@ -252,12 +252,66 @@ describe('LogAnalysisJobsService', () => {
       expect(repo.remove).toHaveBeenCalledTimes(1);
       expect(repo.remove).toHaveBeenCalledWith(existingJob);
       expect(result).toEqual(existingJob);
-    });
+    }); 
 
     it('should throw NotFoundException when job to remove is not found', async () => {
       repo.findOneBy.mockResolvedValue(null);
 
       await expect(service.remove('job-1', 'user-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('addAnomaly', () => {
+    const mockJob = { id: 'job-1' } as LogAnalysisJob;
+    const anomalyData = {
+      title: 'Database connection failed',
+      description: 'Connection timed out',
+      severity: AnomalySeverity.HIGH,
+    };
+
+    it('should return without doing anything if an anomaly with status OPEN or IN_PROGRESS already exists', async () => {
+      const existingAnomaly = { id: 'anomaly-1', status: AnomalyStatus.OPEN } as Anomaly;
+      anomalyRepo.findOne.mockResolvedValue(existingAnomaly);
+
+      await service.addAnomaly(mockJob, anomalyData);
+
+      expect(anomalyRepo.findOne).toHaveBeenCalledWith({
+        where: {
+          logAnalysisJob: { id: mockJob.id },
+          status: In([AnomalyStatus.OPEN, AnomalyStatus.IN_PROGRESS]),
+        },
+      });
+      expect(anomalyRepo.create).not.toHaveBeenCalled();
+      expect(anomalyRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should create and save an anomaly with appropriate fields if no active anomaly exists', async () => {
+      anomalyRepo.findOne.mockResolvedValue(null);
+      const createdAnomaly = {
+        id: 'anomaly-1',
+        logAnalysisJob: mockJob,
+        status: AnomalyStatus.OPEN,
+        ...anomalyData,
+      } as Anomaly;
+      anomalyRepo.create.mockReturnValue(createdAnomaly);
+      anomalyRepo.save.mockResolvedValue(createdAnomaly);
+
+      await service.addAnomaly(mockJob, anomalyData);
+
+      expect(anomalyRepo.findOne).toHaveBeenCalledWith({
+        where: {
+          logAnalysisJob: { id: mockJob.id },
+          status: In([AnomalyStatus.OPEN, AnomalyStatus.IN_PROGRESS]),
+        },
+      });
+      expect(anomalyRepo.create).toHaveBeenCalledWith({
+        logAnalysisJob: mockJob,
+        status: AnomalyStatus.OPEN,
+        title: anomalyData.title,
+        description: anomalyData.description,
+        severity: anomalyData.severity,
+      });
+      expect(anomalyRepo.save).toHaveBeenCalledWith(createdAnomaly);
     });
   });
 });
