@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LogSourcesService } from '../../log-sources/log-sources.service.js';
 import { RemoteServersService } from '../../remote-servers/remote-servers.service.js';
 import { Anomaly, AnomalySeverity, AnomalyStatus } from './entities/anomaly.entity.js';
+import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
+import { AnomalyCreatedEvent } from '../../shared/events/anomaly.event.js'
 
 @Injectable()
 export class LogAnalysisJobsService {
@@ -18,6 +20,7 @@ export class LogAnalysisJobsService {
     private remoteServersService: RemoteServersService,
     @InjectRepository(Anomaly)
     private anomalyRepo: Repository<Anomaly>,
+    private eventEmitter: EventEmitter
   ) {}
 
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
@@ -89,7 +92,8 @@ export class LogAnalysisJobsService {
     })
 
     if(existingAnomaly){
-      return
+      console.log('Anomaly already exist ...')
+      return;
     }
 
     const anomaly = this.anomalyRepo.create({
@@ -101,5 +105,13 @@ export class LogAnalysisJobsService {
     })
 
     await this.anomalyRepo.save(anomaly)
+
+    await this.eventEmitter.emit(
+      AnomalyCreatedEvent.name, 
+      new AnomalyCreatedEvent({
+        anomaly,
+        job,
+      })
+    )
   }
 }

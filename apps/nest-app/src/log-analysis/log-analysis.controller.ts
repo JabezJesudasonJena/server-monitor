@@ -18,6 +18,7 @@ export class LogAnalysisController {
         @Body() body: Array<Record<string, any>>,
         @CurrentUser() currentUser: ICurrentUser,
     ) {
+        // console.log(body)
         // TODO: validate the body in future
         return this.logAnalysisService.ingestLogs(jobId, currentUser.id, body)
     }

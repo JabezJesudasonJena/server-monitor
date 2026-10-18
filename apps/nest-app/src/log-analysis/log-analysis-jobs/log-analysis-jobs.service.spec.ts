@@ -9,6 +9,7 @@ import { LogSourcesService } from '../../log-sources/log-sources.service.js';
 import { RemoteServersService } from '../../remote-servers/remote-servers.service.js';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto.js';
 import { UpdateLogAnalysisJobDto } from './dto/update-log-analysis-job.dto.js';
+import { EventEmitter2 as EventEmitter} from '@nestjs/event-emitter';
 
 describe('LogAnalysisJobsService', () => {
   let service: LogAnalysisJobsService;
@@ -37,6 +38,10 @@ describe('LogAnalysisJobsService', () => {
           provide: RemoteServersService,
           useValue: mock<RemoteServersService>(),
         },
+        {
+          provide: EventEmitter,
+          useValue: mock<EventEmitter>(),
+        }
       ],
     }).compile();
 
