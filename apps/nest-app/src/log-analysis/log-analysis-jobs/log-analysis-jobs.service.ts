@@ -92,7 +92,7 @@ export class LogAnalysisJobsService {
     })
 
     if(existingAnomaly){
-      console.log('Anomaly already exist ...')
+      // console.log('Anomaly already exist ...')
       return;
     }
 
