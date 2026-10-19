@@ -7,6 +7,6 @@ import { LogAnalysisService } from './log-analysis.service.js';
   imports: [LogAnalysisJobsModule],
   controllers: [LogAnalysisController],
   providers: [LogAnalysisService],
-  exports: [LogAnalysisService]
+  exports: [LogAnalysisService, LogAnalysisJobsModule]
 })
 export class LogAnalysisModule { }

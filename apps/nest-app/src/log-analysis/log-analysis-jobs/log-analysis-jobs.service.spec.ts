@@ -9,7 +9,8 @@ import { LogSourcesService } from '../../log-sources/log-sources.service.js';
 import { RemoteServersService } from '../../remote-servers/remote-servers.service.js';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto.js';
 import { UpdateLogAnalysisJobDto } from './dto/update-log-analysis-job.dto.js';
-import { EventEmitter2 as EventEmitter} from '@nestjs/event-emitter';
+import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
+import { AnomalyCreatedEvent } from '../../shared/events/anomaly.event.js';
 
 describe('LogAnalysisJobsService', () => {
   let service: LogAnalysisJobsService;
@@ -17,6 +18,7 @@ describe('LogAnalysisJobsService', () => {
   let anomalyRepo: Mocked<Repository<Anomaly>>;
   let logSourcesService: Mocked<LogSourcesService>;
   let remoteServersService: Mocked<RemoteServersService>;
+  let eventEmitter: Mocked<EventEmitter>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -50,6 +52,7 @@ describe('LogAnalysisJobsService', () => {
     anomalyRepo = module.get<Mocked<Repository<Anomaly>>>(getRepositoryToken(Anomaly));
     logSourcesService = module.get<Mocked<LogSourcesService>>(LogSourcesService);
     remoteServersService = module.get<Mocked<RemoteServersService>>(RemoteServersService);
+    eventEmitter = module.get<Mocked<EventEmitter>>(EventEmitter);
   });
 
   it('should be defined', () => {
@@ -57,6 +60,7 @@ describe('LogAnalysisJobsService', () => {
     expect(repo).toBeDefined();
     expect(logSourcesService).toBeDefined();
     expect(remoteServersService).toBeDefined();
+    expect(eventEmitter).toBeDefined();
   });
 
   describe('create', () => {
@@ -267,7 +271,7 @@ describe('LogAnalysisJobsService', () => {
   });
 
   describe('addAnomaly', () => {
-    const mockJob = { id: 'job-1' } as LogAnalysisJob;
+    const mockJob = { id: 'job-1', ownerId: 'user-1' } as LogAnalysisJob;
     const anomalyData = {
       title: 'Database connection failed',
       description: 'Connection timed out',
@@ -288,6 +292,7 @@ describe('LogAnalysisJobsService', () => {
       });
       expect(anomalyRepo.create).not.toHaveBeenCalled();
       expect(anomalyRepo.save).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should create and save an anomaly with appropriate fields if no active anomaly exists', async () => {
@@ -317,6 +322,30 @@ describe('LogAnalysisJobsService', () => {
         severity: anomalyData.severity,
       });
       expect(anomalyRepo.save).toHaveBeenCalledWith(createdAnomaly);
+    });
+
+    it('should emit AnomalyCreatedEvent with ownerId, jobId, and anomalyId when an anomaly is created', async () => {
+      anomalyRepo.findOne.mockResolvedValue(null);
+      const createdAnomaly = {
+        id: 'anomaly-1',
+        logAnalysisJob: mockJob,
+        status: AnomalyStatus.OPEN,
+        ...anomalyData,
+      } as Anomaly;
+      anomalyRepo.create.mockReturnValue(createdAnomaly);
+      anomalyRepo.save.mockResolvedValue(createdAnomaly);
+
+      await service.addAnomaly(mockJob, anomalyData);
+
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        AnomalyCreatedEvent.name,
+        new AnomalyCreatedEvent({
+          ownerId: mockJob.ownerId,
+          jobId: mockJob.id,
+          anomalyId: createdAnomaly.id,
+        }),
+      );
     });
   });
 });

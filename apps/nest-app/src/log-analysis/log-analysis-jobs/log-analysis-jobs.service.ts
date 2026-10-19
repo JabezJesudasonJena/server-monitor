@@ -23,6 +23,23 @@ export class LogAnalysisJobsService {
     private eventEmitter: EventEmitter
   ) {}
 
+  async getAnomaly(id: string) {
+    return this.anomalyRepo.findOneBy({id});
+  }
+
+  async getTicketingSystemConfig(jobId: string) {
+    const job = await this.repo.findOne({
+      where: {id: jobId},
+      select: {
+        ticketingSystemConfig: true
+      }
+    })
+
+    if(!job) throw new NotFoundException('Log analysis job not found');
+    
+    return job.ticketingSystemConfig;
+  }
+
   async create(props: CreateLogAnalysisJobDto, ownerId: string) {
     const logSource = props.logSourceId
       ? await this.logSourcesService.getById(props.logSourceId, ownerId)
@@ -109,8 +126,9 @@ export class LogAnalysisJobsService {
     await this.eventEmitter.emit(
       AnomalyCreatedEvent.name, 
       new AnomalyCreatedEvent({
-        anomaly,
-        job,
+        ownerId: job.ownerId,
+        jobId: job.id,
+        anomalyId: anomaly.id,
       })
     )
   }

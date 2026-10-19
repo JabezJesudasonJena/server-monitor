@@ -2,22 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { AnomalyCreatedEvent } from '../shared/events/anomaly.event.js';
 import { TicketingProviderFactory } from './ticketing-providers/ticketing-provider.factory.js';
-import { AnomalySeverity } from '../log-analysis/log-analysis-jobs/entities/anomaly.entity.js';
+import { Anomaly, AnomalySeverity, AnomalyStatus } from '../log-analysis/log-analysis-jobs/entities/anomaly.entity.js';
 import { TicketSeverity } from './ticketing.types.js';
+import { LogAnalysisJobsService } from '../log-analysis/log-analysis-jobs/log-analysis-jobs.service.js';
 
 @Injectable()
 export class TicketingService {
-    constructor(private readonly ticketingProviderFactory: TicketingProviderFactory) {}
+    constructor(
+        private readonly ticketingProviderFactory: TicketingProviderFactory,
+        private readonly logAnalysisJobsService: LogAnalysisJobsService
+    ) {}
 
     @OnEvent(AnomalyCreatedEvent.name)
-    handleAnomalyCreatedEvent(event: AnomalyCreatedEvent) {
-        const { anomaly, job } = event.payload;
-        const providerConfig = job.ticketingSystemConfig;
-        if (!providerConfig || !providerConfig?.providerType) {
+    async handleAnomalyCreatedEvent(event: AnomalyCreatedEvent) {
+
+        const {anomalyId, jobId, ownerId} = event.payload
+   
+        const providerConfig = await this.logAnalysisJobsService.getTicketingSystemConfig(jobId);
+
+        if (!providerConfig?.type) {
             return;
         }
 
         const provider = this.ticketingProviderFactory.create(providerConfig);
+        const anomaly = await this.logAnalysisJobsService.getAnomaly(anomalyId)
+        
+        if (!anomaly || (anomaly.status !== AnomalyStatus.OPEN && anomaly.status !== AnomalyStatus.IN_PROGRESS)) {
+            return;  
+        }
+
         return provider.createTicket({
             title: anomaly.title,
             description: anomaly.description,
