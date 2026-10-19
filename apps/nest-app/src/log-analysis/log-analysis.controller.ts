@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiBody } from '@nestjs/swagger';
 import { LogAnalysisService } from './log-analysis.service.js';
 import type { ICurrentUser } from '../auth/current-user.interface.js';
@@ -6,12 +6,12 @@ import { CurrentUser } from '../auth/current-auth.decorator.js';
 
 @Controller('log-analysis')
 export class LogAnalysisController {
-    
     constructor(
         private readonly logAnalysisService: LogAnalysisService
     ) {}    
 
     @ApiBody({type: Array<Record<string, any>>})
+    @HttpCode(200)
     @Post('ingest/:jobId')
     injectLogs(
         @Param('jobId') jobId: string,
