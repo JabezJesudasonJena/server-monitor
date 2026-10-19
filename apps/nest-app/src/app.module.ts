@@ -1,22 +1,17 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { UsersModule } from './users/users.module.js';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RemoteServersModule } from './remote-servers/remote-servers.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { LogSourcesModule } from './log-sources/log-sources.module.js';
 import { LogAnalysisModule } from './log-analysis/log-analysis.module.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TicketingModule } from './ticketing/ticketing.module.js';
+import { DatabaseModule } from './database/database.module.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'better-sqlite3',
-      database: 'db.sqlite',
-      autoLoadEntities: true,
-      synchronize: true,
-    }),
+    DatabaseModule,
     UsersModule,
     RemoteServersModule,
     AuthModule,

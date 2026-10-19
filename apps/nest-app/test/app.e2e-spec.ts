@@ -1,19 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-// import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module.js';
+import { AppModule } from '../src/app.module.js';
+import { DatabaseModule } from './../src/database/database.module.js';
+import { DatabaseTestModule } from './../src/database/database-test.module.js';
+import { DataSource } from 'typeorm';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
+  let dataSource: DataSource;
+  let moduleFix: TestingModule;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    moduleFix = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideModule(DatabaseModule)
+      .useModule(DatabaseTestModule)
+      .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFix.createNestApplication();
     await app.init();
+    dataSource = app.get(DataSource);
   });
 
   it('/ (GET)', () => {
@@ -24,6 +32,10 @@ describe('AppController (e2e)', () => {
   });
 
   afterEach(async () => {
+    if (dataSource && dataSource.isInitialized) {
+      await dataSource.dropDatabase();
+      await dataSource.synchronize();
+    }
     await app?.close();
   });
 });
