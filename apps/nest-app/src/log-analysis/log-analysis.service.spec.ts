@@ -79,7 +79,7 @@ describe('LogAnalysisService', () => {
         mockJob,
         {
           title: 'Database connection failed',
-          description: 'Database connection failed',
+          description: JSON.stringify(logs[0]),
           severity: AnomalySeverity.HIGH,
         },
       );
@@ -89,7 +89,7 @@ describe('LogAnalysisService', () => {
         mockJob,
         {
           title: 'Fatal crash detected',
-          description: 'Fatal crash detected',
+          description: JSON.stringify(logs[1]),
           severity: AnomalySeverity.CRITICAL,
         },
       );
@@ -104,7 +104,7 @@ describe('LogAnalysisService', () => {
 
       expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(mockJob, {
         title: 'Unrecoverable heap corruption',
-        description: 'Unrecoverable heap corruption',
+        description: JSON.stringify(logs[0]),
         severity: AnomalySeverity.CRITICAL,
       });
     });
@@ -124,7 +124,7 @@ describe('LogAnalysisService', () => {
         mockJob,
         {
           title: 'High memory usage',
-          description: 'High memory usage',
+          description: JSON.stringify(logs[0]),
           severity: AnomalySeverity.HIGH,
         },
       );
@@ -134,7 +134,7 @@ describe('LogAnalysisService', () => {
         mockJob,
         {
           title: 'Timeout error',
-          description: 'Timeout error',
+          description: JSON.stringify(logs[1]),
           severity: AnomalySeverity.HIGH,
         },
       );
@@ -149,7 +149,7 @@ describe('LogAnalysisService', () => {
 
       expect(logAnalysisJobsService.addAnomaly).toHaveBeenCalledWith(mockJob, {
         title: 'Untitled Log message',
-        description: 'Untitled Log message',
+        description: JSON.stringify(logs[0]),
         severity: AnomalySeverity.HIGH,
       });
     });
