@@ -8,7 +8,6 @@ import {
   LogAnalysisJobStatus,
   LogAnalysisJobType,
 } from './log-analysis-jobs/entities/log-analysis-job.entity.js';
-import type { Mocked } from 'vitest-mock-extended';
 
 describe('LogAnalysisService', () => {
   let service: LogAnalysisService;
@@ -16,12 +15,12 @@ describe('LogAnalysisService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LogAnalysisService]
+      providers: [LogAnalysisService],
     })
-    .useMocker(() => mock())
-    .compile();
+      .useMocker(() => mock())
+      .compile();
 
-    service = module.get<LogAnalysisService>(LogAnalysisService);
+    service = module.get(LogAnalysisService);
     logAnalysisJobsService = module.get(LogAnalysisJobsService);
   });
 
@@ -33,16 +32,19 @@ describe('LogAnalysisService', () => {
   describe('ingestLogs', () => {
     const jobId = 'job-123';
     const ownerId = 'user-456';
-    const mockJob: LogAnalysisJob = {
+    const mockJob = {
       id: jobId,
       ownerId,
       status: LogAnalysisJobStatus.RUNNING,
       type: LogAnalysisJobType.one_time,
-      createdAt: new Date(),
-    };
+    } as LogAnalysisJob;
+
+    beforeEach(() => {
+      logAnalysisJobsService.findOne.mockResolvedValue(mockJob);
+    });
 
     it('should throw NotFoundException when job is not found (null)', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(null);
+      logAnalysisJobsService.findOne.mockResolvedValue(null as any);
 
       const logs = [{ message: 'Database failed', level: 'error' }];
 
@@ -58,8 +60,6 @@ describe('LogAnalysisService', () => {
     });
 
     it('should call jobService and add anomaly for every log with proper attributes', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(mockJob);
-
       const logs = [
         { message: 'Database connection failed', level: 'error' },
         { message: 'Fatal crash detected', level: 'critical' },
@@ -92,8 +92,6 @@ describe('LogAnalysisService', () => {
     });
 
     it('should set severity to CRITICAL when log level is critical', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(mockJob);
-
       const logs = [{ message: 'Unrecoverable heap corruption', level: 'critical' }];
 
       await service.ingestLogs(jobId, ownerId, logs);
@@ -106,8 +104,6 @@ describe('LogAnalysisService', () => {
     });
 
     it('should set severity to HIGH when log level is error or any non-critical value', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(mockJob);
-
       const logs = [
         { message: 'High memory usage', level: 'warn' },
         { message: 'Timeout error', level: 'error' },
@@ -137,8 +133,6 @@ describe('LogAnalysisService', () => {
     });
 
     it('should fallback to default title, description, and severity when message and level are missing', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(mockJob);
-
       const logs = [{}];
 
       await service.ingestLogs(jobId, ownerId, logs);
@@ -151,8 +145,6 @@ describe('LogAnalysisService', () => {
     });
 
     it('should not call addAnomaly when logs array is empty', async () => {
-      logAnalysisJobsService.findOne.mockResolvedValue(mockJob);
-
       await service.ingestLogs(jobId, ownerId, []);
 
       expect(logAnalysisJobsService.findOne).toHaveBeenCalledWith(jobId, ownerId);

@@ -4,43 +4,39 @@ import { TicketingProviderFactory } from './ticketing-providers/ticketing-provid
 import { ITicketingProvider } from './ticketing-providers/ticketing-providers.interface.js';
 import { AnomalyCreatedEvent } from '../shared/events/anomaly.event.js';
 import { Anomaly, AnomalySeverity, AnomalyStatus } from '../log-analysis/log-analysis-jobs/entities/anomaly.entity.js';
-import { Ticket, TicketSeverity, TicketStatus } from './ticketing.types.js';
+import { TicketSeverity } from './ticketing.types.js';
 import { LogAnalysisJobsService } from '../log-analysis/log-analysis-jobs/log-analysis-jobs.service.js';
-import type { Mocked } from 'vitest-mock-extended';
+import { EventEmitter2 as EventEmitter } from '@nestjs/event-emitter';
+import { TicketCreatedEvent } from '../shared/events/ticket.event.js';
 
 describe('TicketingService', () => {
   let service: TicketingService;
   let factory: Mocked<TicketingProviderFactory>;
   let logAnalysisJobsService: Mocked<LogAnalysisJobsService>;
   let mockProvider: Mocked<ITicketingProvider>;
+  let eventEmitter: Mocked<EventEmitter>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TicketingService,
-        {
-          provide: TicketingProviderFactory,
-          useValue: mock<TicketingProviderFactory>(),
-        },
-        {
-          provide: LogAnalysisJobsService,
-          useValue: mock<LogAnalysisJobsService>(),
-        },
-      ],
-    }).compile();
+      providers: [TicketingService],
+    })
+      .useMocker(() => mock())
+      .compile();
 
-    service = module.get<TicketingService>(TicketingService);
+    service = module.get(TicketingService);
     factory = module.get(TicketingProviderFactory);
     logAnalysisJobsService = module.get(LogAnalysisJobsService);
+    eventEmitter = module.get(EventEmitter);
 
     mockProvider = mock<ITicketingProvider>();
-    factory.create.mockReturnValue(mockProvider);
+    factory.create.mockReturnValue(mockProvider as any);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(factory).toBeDefined();
     expect(logAnalysisJobsService).toBeDefined();
+    expect(eventEmitter).toBeDefined();
   });
 
   describe('handleAnomalyCreatedEvent', () => {
@@ -74,6 +70,7 @@ describe('TicketingService', () => {
       expect(logAnalysisJobsService.getTicketingSystemConfig).toHaveBeenCalledWith(eventPayload.jobId);
       expect(factory.create).not.toHaveBeenCalled();
       expect(mockProvider.createTicket).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should return early if ticketingSystemConfig does not contain type', async () => {
@@ -85,6 +82,7 @@ describe('TicketingService', () => {
       expect(logAnalysisJobsService.getTicketingSystemConfig).toHaveBeenCalledWith(eventPayload.jobId);
       expect(factory.create).not.toHaveBeenCalled();
       expect(mockProvider.createTicket).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should return early if anomaly is not found', async () => {
@@ -96,6 +94,7 @@ describe('TicketingService', () => {
       expect(result).toBeUndefined();
       expect(factory.create).toHaveBeenCalledWith(mockConfig);
       expect(mockProvider.createTicket).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should return early if anomaly status is neither OPEN nor IN_PROGRESS', async () => {
@@ -109,52 +108,36 @@ describe('TicketingService', () => {
 
       expect(result).toBeUndefined();
       expect(mockProvider.createTicket).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('should create and return a ticket when anomaly status is IN_PROGRESS', async () => {
+    it('should create ticket and emit TicketCreatedEvent when anomaly status is IN_PROGRESS', async () => {
       logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue(mockConfig);
       logAnalysisJobsService.getAnomaly.mockResolvedValue({
         ...mockAnomaly,
         status: AnomalyStatus.IN_PROGRESS,
       } as Anomaly);
 
-      const createdTicket: Ticket = {
-        id: 'ticket-123',
-        title: mockAnomaly.title,
-        description: mockAnomaly.description,
-        severity: TicketSeverity.CRITICAL,
-        status: TicketStatus.OPEN,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      mockProvider.createTicket.mockResolvedValue(createdTicket);
-
-      const result = await service.handleAnomalyCreatedEvent(mockEvent);
+      await service.handleAnomalyCreatedEvent(mockEvent);
 
       expect(mockProvider.createTicket).toHaveBeenCalledWith({
         title: mockAnomaly.title,
         description: mockAnomaly.description,
         severity: TicketSeverity.CRITICAL,
       });
-      expect(result).toEqual(createdTicket);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        TicketCreatedEvent.name,
+        new TicketCreatedEvent({
+          anomalyId: eventPayload.anomalyId,
+        }),
+      );
     });
 
-    it('should create and return a ticket with proper attributes when providerConfig is present and anomaly is OPEN', async () => {
+    it('should create ticket and emit TicketCreatedEvent with proper attributes when providerConfig is present and anomaly is OPEN', async () => {
       logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue(mockConfig);
       logAnalysisJobsService.getAnomaly.mockResolvedValue(mockAnomaly);
 
-      const createdTicket: Ticket = {
-        id: 'ticket-123',
-        title: mockAnomaly.title,
-        description: mockAnomaly.description,
-        severity: TicketSeverity.CRITICAL,
-        status: TicketStatus.OPEN,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      mockProvider.createTicket.mockResolvedValue(createdTicket);
-
-      const result = await service.handleAnomalyCreatedEvent(mockEvent);
+      await service.handleAnomalyCreatedEvent(mockEvent);
 
       expect(logAnalysisJobsService.getTicketingSystemConfig).toHaveBeenCalledWith(eventPayload.jobId);
       expect(factory.create).toHaveBeenCalledWith(mockConfig);
@@ -164,7 +147,12 @@ describe('TicketingService', () => {
         description: mockAnomaly.description,
         severity: TicketSeverity.CRITICAL,
       });
-      expect(result).toEqual(createdTicket);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        TicketCreatedEvent.name,
+        new TicketCreatedEvent({
+          anomalyId: eventPayload.anomalyId,
+        }),
+      );
     });
 
     it.each([
@@ -172,7 +160,7 @@ describe('TicketingService', () => {
       [AnomalySeverity.MEDIUM, TicketSeverity.MEDIUM],
       [AnomalySeverity.HIGH, TicketSeverity.HIGH],
       [AnomalySeverity.CRITICAL, TicketSeverity.CRITICAL],
-    ])('should map %s to %s', async (anomalySeverity, expectedTicketSeverity) => {
+    ])('should map %s to %s and emit TicketCreatedEvent', async (anomalySeverity, expectedTicketSeverity) => {
       logAnalysisJobsService.getTicketingSystemConfig.mockResolvedValue(mockConfig);
       logAnalysisJobsService.getAnomaly.mockResolvedValue({
         ...mockAnomaly,
@@ -184,6 +172,12 @@ describe('TicketingService', () => {
       expect(mockProvider.createTicket).toHaveBeenCalledWith(
         expect.objectContaining({
           severity: expectedTicketSeverity,
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        TicketCreatedEvent.name,
+        new TicketCreatedEvent({
+          anomalyId: eventPayload.anomalyId,
         }),
       );
     });
