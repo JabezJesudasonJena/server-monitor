@@ -23,8 +23,12 @@ export class LogAnalysisJobsService {
     private eventEmitter: EventEmitter
   ) {}
 
-  async getAnomaly(id: string) {
-    return this.anomalyRepo.findOneBy({id});
+  async getAnomaly(anomalyId: string) {
+    return this.anomalyRepo.findOne({
+      where: {
+        id: anomalyId,
+      }
+    });
   }
 
   async getTicketingSystemConfig(jobId: string) {
