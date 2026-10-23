@@ -16,14 +16,10 @@ describe('LogAnalysisService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LogAnalysisService,
-        {
-          provide: LogAnalysisJobsService,
-          useValue: mock<LogAnalysisJobsService>(),
-        },
-      ],
-    }).compile();
+      providers: [LogAnalysisService]
+    })
+    .useMocker(() => mock())
+    .compile();
 
     service = module.get<LogAnalysisService>(LogAnalysisService);
     logAnalysisJobsService = module.get(LogAnalysisJobsService);

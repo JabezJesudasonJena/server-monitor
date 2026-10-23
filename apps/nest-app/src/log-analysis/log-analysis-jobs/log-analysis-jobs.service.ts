@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLogAnalysisJobDto } from './dto/create-log-analysis-job.dto.js';
 import { UpdateLogAnalysisJobDto } from './dto/update-log-analysis-job.dto.js';
 import { Repository, In } from 'typeorm';
@@ -40,55 +40,42 @@ export class LogAnalysisJobsService {
     return job.ticketingSystemConfig;
   }
 
-  async create(props: CreateLogAnalysisJobDto, ownerId: string) {
-    const logSource = props.logSourceId
-      ? await this.logSourcesService.getById(props.logSourceId, ownerId)
-      : null;
-    const remoteServer = await this.remoteServersService.getById(props.remoteServerId, ownerId);
-    
-    if ((props.logSourceId && !logSource) || !remoteServer) {
-      throw new NotFoundException('Log Source or Remote Server not found!');
-    }
+  async create(props: CreateLogAnalysisJobDto, ownerId: string) : Promise<LogAnalysisJob>{
+    const remoteServer = await this.remoteServersService.findOne(
+      props.remoteServerId,
+      ownerId
+    )
 
-    const logAnalysisJob = this.repo.create({
+    if(!remoteServer) {
+      throw new BadRequestException('Remote Server not found');
+    } 
+
+    const logSource = props.logSourceId
+      ? await this.logSourcesService.findOne(props.logSourceId, ownerId)
+      : null;
+    return this.repo.save({
       ...props,
       ownerId,
-      logSource,
-      remoteServer,
-      status: LogAnalysisJobStatus.INITIALIZED,
-      ticketingSystemConfig: props.ticketingSystemConfig || {}
+      status:LogAnalysisJobStatus.INITIALIZED,
+      logSource: logSource ?? undefined,
+      remoteServer
     })
-
-    return this.repo.save(logAnalysisJob)
-
   }
   
-  async findAll(ownerId: string) {
+  async findAll(ownerId: string) : Promise<LogAnalysisJob[]>{
     return this.repo.find({where: {ownerId}});
   }
 
-  async findOne(id: string, ownerId: string) {
-    const exist = await this.repo.findOneBy({id, ownerId});
-    if (!exist) throw new NotFoundException('Log analysis job not found');
-    return exist;
-  }
-
-  async getbyId(id:string , ownerId: string){
-    const job = await this.repo.findOneBy({id, ownerId});
-    if (!job) throw new NotFoundException('Log analysis job not found');
-    return job;
+  async findOne(id:string , ownerId: string): Promise<LogAnalysisJob>{
+    return this.repo.findOneByOrFail({id, ownerId})
   }
 
   async update(id: string, updateLogAnalysisJobDto: UpdateLogAnalysisJobDto, ownerId: string) {
-    const exist = await this.getbyId(id, ownerId);
-    if (!exist) throw new NotFoundException('Log analysis job not found');
-    return this.repo.save({...exist, ...updateLogAnalysisJobDto});
+    return this.repo.update({id, ownerId}, updateLogAnalysisJobDto);
   } 
 
   async remove(id: string, ownerId: string) {
-    const exist = await this.findOne(id, ownerId);
-    if (!exist) throw new NotFoundException('Log analysis job not found');
-    return this.repo.remove(exist);
+    return this.repo.delete({id, ownerId});
   }
 
   async addAnomaly(job:LogAnalysisJob, {title, description, severity}: {

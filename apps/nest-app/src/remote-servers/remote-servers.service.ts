@@ -12,54 +12,26 @@ export class RemoteServersService {
     private repo: Repository<RemoteServer>,
   ) {}
 
-  
   create(props: CreateRemoteServerDto , ownerId: string) {
-    const remoteServer = this.repo.create({
+    return this.repo.save({
       ...props,
-      ownerId,
-      status: RemoteServerStatus.UNKNOWN
+      ownerId
     });
-    return this.repo.save(remoteServer);
   }
 
-  async getById(id: string, ownerId: string) {
-    const server = await this.repo.findOne({
-      where: {id: String(id), ownerId}
-    });
-
-    if(!server) {
-      throw new NotFoundException(`Remote server with ID "${id}" not found !`);
-    }
-
-    return server;
+  findAll(ownerId: string) : Promise<RemoteServer[]>{
+    return this.repo.find({where: {ownerId}});
   }
 
-  findAll() {
-    return this.repo.find();
-  }
-
-  findOne(id: string, ownerId: string) {
-    return this.repo.findOne({where: {id: String(id), ownerId}});
+  findOne(id: string, ownerId: string) : Promise<RemoteServer>{
+    return this.repo.findOneByOrFail({id, ownerId})
   }
 
   async update(id: string, updateRemoteServerDto: UpdateRemoteServerDto, ownerId: string) {
-    const server = await this.repo.findOne({where: {id: String(id), ownerId}});
-
-    if(!server) {
-      throw new NotFoundException(`Remote server with ID "${id}" not found !`);
-    }
-
-    this.repo.merge(server, updateRemoteServerDto);
-    return this.repo.save(server);
+    return this.repo.update({id, ownerId}, updateRemoteServerDto);
   }
 
   async remove(id: string, ownerId: string) {
-    const server = await this.repo.findOne({where: {id: String(id), ownerId}});
-
-    if(!server) {
-      throw new NotFoundException(`Remote server with ID "${id}" not found !`);
-    }
-    
-    return this.repo.remove(server);
+    return this.repo.delete({id, ownerId})
   }
 }
