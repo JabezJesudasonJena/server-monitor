@@ -35,5 +35,5 @@ export class Anomaly {
     ticketInfo?: Record<string, any>;
 
     @ManyToOne(() => LogAnalysisJob, (job) => job.anomalies)
-    logAnalysisJob: Relation<LogAnalysisJob>;
+    logAnalysisJob: LogAnalysisJob;
 }

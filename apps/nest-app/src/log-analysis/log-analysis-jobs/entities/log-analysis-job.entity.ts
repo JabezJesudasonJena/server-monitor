@@ -51,6 +51,6 @@ export class LogAnalysisJob {
     remoteServer: RemoteServer;
 
     @OneToMany(() => Anomaly, (anomaly) => anomaly.logAnalysisJob, {onDelete: 'CASCADE'})
-    anomalies: Relation<Anomaly[]>;
+    anomalies: Anomaly[];
 
 }

@@ -13,7 +13,23 @@ export class MonitoringService {
     @OnEvent(TicketCreatedEvent.name)
     async handleTicketCreation(event: TicketCreatedEvent) {
         const {anomalyId} = event.payload;
-        const {server, ticket} = await this.ticketCreationContextQuery.execute(anomalyId);
+        (this.ticketCreationContextQuery.execute(anomalyId)).match(
+            ({ticket, server}) => {
+                
+            },
+            (err) => {
+                switch(err){
+                    case 'DATABASE_ERROR':
+                        break;
+                    case 'ANOMALY_NOT_FOUND':
+                        break;
+                    case 'TICKETING_INFO_NOT_FOUND':
+                        break;
+                    case 'SERVER_NOT_FOUND':
+                        break;
+                }
+            }
+        );
         
     }
 }
