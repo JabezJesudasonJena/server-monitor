@@ -18,6 +18,7 @@ export class MonitoringService {
                 
             },
             (err) => {
+                /*
                 switch(err){
                     case 'DATABASE_ERROR':
                         break;
@@ -28,6 +29,7 @@ export class MonitoringService {
                     case 'SERVER_NOT_FOUND':
                         break;
                 }
+                */
             }
         );
         
